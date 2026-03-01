@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">GT Monitor</string>
+    <string name="status_monitoring">\u25CF MONITORING ACTIVE</string>
+    <string name="label_operator">OPERATOR</string>
+    <string name="label_network_type">NETWORK TYPE</string>
+    <string name="label_signal">SIGNAL STRENGTH</string>
+    <string name="label_signal_level">SIGNAL LEVEL</string>
+    <string name="label_registered_cell">REGISTERED CELL</string>
+    <string name="label_tac">TAC/LAC</string>
+    <string name="label_pci">PCI</string>
+    <string name="label_earfcn">EARFCN</string>
+    <string name="label_mcc">MCC</string>
+    <string name="label_mnc">MNC</string>
+    <string name="label_bandwidth">BANDWIDTH</string>
+    <string name="label_service_state">SERVICE STATE</string>
+    <string name="label_visible_cells">VISIBLE CELLS</string>
+    <string name="label_last_event">LAST EVENT</string>
+    <string name="btn_stop_service">Stop Service</string>
+</resources>

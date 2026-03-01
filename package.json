@@ -1,0 +1,22 @@
+{
+  "author": "RVÐ",
+  "license": "GGPL",
+  "version": "1.0.0",
+  "name": "gtmonitor",
+  "displayName": "GTMonitor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/izocel/gtmonitor.git"
+  },
+  "scripts": {
+    "build": "gradlew build",
+    "clean": "gradlew clean",
+    "assemble-debug": "gradlew assembleDebug",
+    "assemble-release": "gradlew assembleRelease",
+    "dev": "npm run clean && npm run build && npm run android",
+    "android": "gradlew installDebug && adb shell am start -n com.example.gtmonitor/.MainActivity",
+    "android-prod": "gradlew installRelease && adb shell am start -n com.example.gtmonitor/.MainActivity",
+    "test": "gradlew test",
+    "lint": "gradlew lint"
+  }
+}
