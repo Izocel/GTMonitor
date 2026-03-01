@@ -35,15 +35,6 @@ echo "==> Pushing branch and tag to origin"
 git push origin "${BRANCH}"
 git push origin "${TAG}"
 
-# ── Build all release artifacts ──────────────────────────────────────
-echo "==> Building release artifacts"
-bash scripts/clean.sh
-bash scripts/build.sh
-bash scripts/assemble.sh
-bash scripts/assemble-prod.sh
-bash scripts/bundle.sh
-bash scripts/bundle-prod.sh
-
 # ── Collect output files ─────────────────────────────────────────────
 OUTPUT_DIR="app/build/outputs"
 ASSETS=()
