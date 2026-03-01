@@ -52,19 +52,22 @@ the correct provider. Adding a new OEM module is two steps:
 
 ## Build
 
+All commands delegate to bash scripts in `scripts/`:
+
 ```bash
-npm run build           # full Gradle build
-npm run assemble        # debug APK only
-npm run assemble-prod   # release APK (signed)
-npm run bundle          # debug AAB
-npm run bundle-prod     # release AAB (signed)
-npm run android         # install debug + launch on device
-npm run android-prod    # install release + launch on device
-npm run dev             # clean → build → install debug
-npm run release         # clean → build → assemble/bundle all → install release
-npm run clean           # clean build artifacts
-npm run lint            # run lint checks
-npm run test            # run tests
+npm run build           # full Gradle build              (scripts/build.sh)
+npm run assemble        # debug APK only                 (scripts/assemble.sh)
+npm run assemble-prod   # release APK (signed)           (scripts/assemble-prod.sh)
+npm run bundle          # debug AAB                      (scripts/bundle.sh)
+npm run bundle-prod     # release AAB (signed)           (scripts/bundle-prod.sh)
+npm run android         # install debug + launch         (scripts/android.sh)
+npm run android-prod    # install release + launch       (scripts/android-prod.sh)
+npm run dev             # clean → build → install debug  (scripts/dev.sh)
+npm run release         # clean → build → all artifacts  (scripts/release.sh)
+npm run publish         # tag, push, build & GitHub release (scripts/publish.sh)
+npm run clean           # clean build artifacts          (scripts/clean.sh)
+npm run lint            # run lint checks                (scripts/lint.sh)
+npm run test            # run tests                      (scripts/test.sh)
 ```
 
 Requires Android SDK with **minSdk 29** (Android 10+) · targetSdk 34 · compileSdk 34.

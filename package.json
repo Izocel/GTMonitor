@@ -2,6 +2,7 @@
   "author": "RVÐ",
   "license": "GGPL",
   "version": "1.0.0",
+  "versionCode": 1,
   "name": "gtmonitor",
   "displayName": "GTMonitor",
   "repository": {
@@ -9,17 +10,18 @@
     "url": "https://github.com/izocel/gtmonitor.git"
   },
   "scripts": {
-    "test": "gradlew test",
-    "lint": "gradlew lint",
-    "build": "gradlew build",
-    "clean": "gradlew clean",
-    "assemble": "gradlew assembleDebug",
-    "bundle-prod": "gradlew bundleRelease",
-    "bundle": "gradlew bundleDebug",
-    "assemble-prod": "gradlew assembleRelease",
-    "dev": "npm run clean && npm run build && npm run android",
-    "android": "gradlew installDebug && adb shell am start -n com.example.gtmonitor/.MainActivity",
-    "android-prod": "gradlew installRelease && adb shell am start -n com.example.gtmonitor/.MainActivity",
-    "release": "npm run clean && npm run build && npm run assemble && npm run assemble-prod && npm run bundle && npm run bundle-prod && npm run android-prod"
+    "test": "bash scripts/test.sh",
+    "lint": "bash scripts/lint.sh",
+    "build": "bash scripts/build.sh",
+    "clean": "bash scripts/clean.sh",
+    "assemble": "bash scripts/assemble.sh",
+    "assemble-prod": "bash scripts/assemble-prod.sh",
+    "bundle": "bash scripts/bundle.sh",
+    "bundle-prod": "bash scripts/bundle-prod.sh",
+    "android": "bash scripts/android.sh",
+    "android-prod": "bash scripts/android-prod.sh",
+    "dev": "bash scripts/dev.sh",
+    "release": "bash scripts/release.sh",
+    "publish": "bash scripts/publish.sh"
   }
 }
