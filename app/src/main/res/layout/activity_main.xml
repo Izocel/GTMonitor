@@ -314,14 +314,35 @@
             android:textSize="14sp"
             android:layout_marginBottom="16dp" />
 
-        <!-- Stop Button -->
+        <!-- Toggle Service Button -->
         <Button
-            android:id="@+id/stopButton"
+            android:id="@+id/toggleButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/btn_stop_service"
-            android:backgroundTint="#CF6679"
-            android:textColor="#FFFFFF" />
+            android:text="@string/btn_start_service"
+            android:backgroundTint="#00E676"
+            android:textColor="#000000" />
+
+        <!-- Refresh Button -->
+        <Button
+            android:id="@+id/refreshButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_refresh"
+            android:backgroundTint="#444466"
+            android:textColor="#FFFFFF"
+            android:visibility="gone"
+            android:layout_marginTop="8dp" />
+
+        <!-- View Log Button -->
+        <Button
+            android:id="@+id/logButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_view_log"
+            android:backgroundTint="#333355"
+            android:textColor="#AAAAAA"
+            android:layout_marginTop="8dp" />
 
     </LinearLayout>
 </ScrollView>

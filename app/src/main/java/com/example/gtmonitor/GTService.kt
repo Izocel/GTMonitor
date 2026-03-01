@@ -9,19 +9,14 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.telephony.CellInfo
-import android.telephony.CellInfoLte
-import android.telephony.CellInfoNr
-import android.telephony.CellInfoGsm
-import android.telephony.CellInfoWcdma
-import android.telephony.CellInfoCdma
-import android.telephony.CellIdentityLte
-import android.telephony.CellIdentityGsm
-import android.telephony.CellIdentityWcdma
-import android.telephony.CellIdentityCdma
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
+import com.example.gtmonitor.provider.CellDataSnapshot
+import com.example.gtmonitor.provider.CellInfoProvider
+import com.example.gtmonitor.provider.DeviceProviderFactory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,21 +31,30 @@ class GTService : Service() {
             private set
     }
 
-    private lateinit var telephonyManager: TelephonyManager
+    lateinit var telephonyManager: TelephonyManager
+        private set
     private lateinit var listener: GTListener
     private lateinit var notificationManager: NotificationManager
     private lateinit var openPendingIntent: PendingIntent
     private lateinit var stopPendingIntent: PendingIntent
+
+    lateinit var provider: CellInfoProvider
+        private set
 
     private var foregroundStarted = false
 
     var currentInfo: ConnectionInfo = ConnectionInfo()
         private set
     var onInfoUpdated: ((ConnectionInfo) -> Unit)? = null
+    var onServiceStopped: (() -> Unit)? = null
+
+    // Cache the last cell info received from the listener
+    private var lastKnownCells: List<CellInfo>? = null
 
     override fun onCreate() {
         super.onCreate()
         instance = this
+        GTLog.init(this)
 
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -75,6 +79,11 @@ class GTService : Service() {
         )
 
         telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+
+        // Select device-specific provider
+        provider = DeviceProviderFactory.create()
+        provider.start(telephonyManager)
+
         listener = GTListener(this)
 
         telephonyManager.listen(
@@ -83,34 +92,38 @@ class GTService : Service() {
             PhoneStateListener.LISTEN_SERVICE_STATE
         )
 
+        // Log permission state for diagnostics
+        val hasLocation = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val hasPhone = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        GTLog.d("Permissions: ACCESS_FINE_LOCATION=$hasLocation, READ_PHONE_STATE=$hasPhone")
+
         refreshNotification()
+    }
+
+    /** Called from GTListener with cell data the OS already provided */
+    fun refreshWithCellInfo(cellInfoList: List<CellInfo>?, event: String? = null) {
+        if (!cellInfoList.isNullOrEmpty()) {
+            lastKnownCells = cellInfoList
+        }
+        val snapshot = provider.processCellInfoChanged(cellInfoList)
+        if (snapshot != null) {
+            publishSnapshot(snapshot, event)
+        } else {
+            // Provider couldn't use the list — do a full request
+            refreshNotification(event)
+        }
     }
 
     @SuppressLint("MissingPermission")
     fun refreshNotification(event: String? = null) {
+        provider.requestCellData(telephonyManager) { snapshot ->
+            publishSnapshot(snapshot, event)
+        }
+    }
+
+    private fun publishSnapshot(snapshot: CellDataSnapshot, event: String?) {
         val networkType = getNetworkTypeName()
         val operator = telephonyManager.networkOperatorName.ifEmpty { "Unknown" }
-        val cellInfoList = try { telephonyManager.allCellInfo } catch (_: SecurityException) { null }
-        val registered = cellInfoList?.firstOrNull { it.isRegistered }
-
-        val signalDbm = registered?.let { formatSignalDbm(it) } ?: "N/A"
-        val signalLevel = registered?.let { formatSignalLevel(it) } ?: "N/A"
-        val cellId = registered?.let { formatCellId(it) } ?: "N/A"
-        val tac = registered?.let { formatTac(it) } ?: "N/A"
-        val pci = registered?.let { formatPci(it) } ?: "N/A"
-        val earfcn = registered?.let { formatEarfcn(it) } ?: "N/A"
-        val mcc = registered?.let { formatMcc(it) } ?: "N/A"
-        val mnc = registered?.let { formatMnc(it) } ?: "N/A"
-        val bandwidth = registered?.let { formatBandwidth(it) } ?: "N/A"
-        val cellCount = cellInfoList?.size ?: 0
-
-        val visibleCells = cellInfoList?.joinToString("\n") { cell ->
-            val reg = if (cell.isRegistered) "●" else "○"
-            val type = getCellType(cell)
-            val id = formatCellId(cell)
-            val dbm = formatSignalDbm(cell)
-            "$reg $type $id  $dbm"
-        } ?: "N/A"
 
         val timestamp = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         val lastEvent = if (event != null) "$timestamp - $event" else "$timestamp - Initial read"
@@ -118,17 +131,17 @@ class GTService : Service() {
         currentInfo = ConnectionInfo(
             operator = operator,
             networkType = networkType,
-            signalDbm = signalDbm,
-            signalLevel = signalLevel,
-            cellId = cellId,
-            tac = tac,
-            pci = pci,
-            earfcn = earfcn,
-            mcc = mcc,
-            mnc = mnc,
-            bandwidth = bandwidth,
+            signalDbm = snapshot.signalDbm ?: "N/A",
+            signalLevel = snapshot.signalLevel ?: "N/A",
+            cellId = snapshot.cellId ?: "N/A",
+            tac = snapshot.tac ?: "N/A",
+            pci = snapshot.pci ?: "N/A",
+            earfcn = snapshot.earfcn ?: "N/A",
+            mcc = snapshot.mcc ?: "N/A",
+            mnc = snapshot.mnc ?: "N/A",
+            bandwidth = snapshot.bandwidth ?: "N/A",
             serviceState = currentInfo.serviceState,
-            visibleCells = visibleCells,
+            visibleCells = snapshot.visibleCells ?: "N/A",
             lastEvent = lastEvent
         )
 
@@ -136,7 +149,7 @@ class GTService : Service() {
 
         val title = "$operator \u2022 $networkType"
         val details = buildString {
-            append("Signal: $signalDbm \u2022 Cells: $cellCount")
+            append("Signal: ${snapshot.signalDbm ?: "N/A"} \u2022 Cells: ${snapshot.cellCount}")
             if (event != null) append("\n$event")
         }
 
@@ -144,7 +157,7 @@ class GTService : Service() {
             .setContentTitle(title)
             .setContentText(details)
             .setStyle(Notification.BigTextStyle().bigText(details))
-            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -153,7 +166,11 @@ class GTService : Service() {
             .build()
 
         if (!foregroundStarted) {
-            startForeground(NOTIFICATION_ID, notification)
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            )
             foregroundStarted = true
         } else {
             notificationManager.notify(NOTIFICATION_ID, notification)
@@ -186,114 +203,14 @@ class GTService : Service() {
         }
     }
 
-    private fun getCellType(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> "LTE"
-            is CellInfoGsm -> "GSM"
-            is CellInfoWcdma -> "WCDMA"
-            is CellInfoCdma -> "CDMA"
-            else -> if (android.os.Build.VERSION.SDK_INT >= 29 && cell is CellInfoNr) "NR" else "?"
-        }
-    }
-
-    private fun formatSignalDbm(cell: CellInfo): String {
-        val dbm = when {
-            cell is CellInfoLte -> cell.cellSignalStrength.dbm
-            android.os.Build.VERSION.SDK_INT >= 29 && cell is CellInfoNr -> cell.cellSignalStrength.dbm
-            cell is CellInfoGsm -> cell.cellSignalStrength.dbm
-            cell is CellInfoWcdma -> cell.cellSignalStrength.dbm
-            cell is CellInfoCdma -> cell.cellSignalStrength.dbm
-            else -> return "N/A"
-        }
-        return "$dbm dBm"
-    }
-
-    private fun formatSignalLevel(cell: CellInfo): String {
-        val level = when {
-            cell is CellInfoLte -> cell.cellSignalStrength.level
-            android.os.Build.VERSION.SDK_INT >= 29 && cell is CellInfoNr -> cell.cellSignalStrength.level
-            cell is CellInfoGsm -> cell.cellSignalStrength.level
-            cell is CellInfoWcdma -> cell.cellSignalStrength.level
-            cell is CellInfoCdma -> cell.cellSignalStrength.level
-            else -> return "N/A"
-        }
-        return when (level) {
-            4 -> "Great (4/4)"
-            3 -> "Good (3/4)"
-            2 -> "Moderate (2/4)"
-            1 -> "Poor (1/4)"
-            0 -> "None (0/4)"
-            else -> "$level/4"
-        }
-    }
-
-    private fun formatCellId(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> "${cell.cellIdentity.ci}"
-            is CellInfoGsm -> "${cell.cellIdentity.cid}"
-            is CellInfoWcdma -> "${cell.cellIdentity.cid}"
-            is CellInfoCdma -> "${cell.cellIdentity.basestationId}"
-            else -> "N/A"
-        }
-    }
-
-    private fun formatTac(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> "${cell.cellIdentity.tac}"
-            is CellInfoGsm -> "${cell.cellIdentity.lac}"
-            is CellInfoWcdma -> "${cell.cellIdentity.lac}"
-            else -> "N/A"
-        }
-    }
-
-    private fun formatPci(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> "${cell.cellIdentity.pci}"
-            is CellInfoWcdma -> "${cell.cellIdentity.psc}"
-            else -> "N/A"
-        }
-    }
-
-    private fun formatEarfcn(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> "${cell.cellIdentity.earfcn}"
-            is CellInfoGsm -> "${cell.cellIdentity.arfcn}"
-            is CellInfoWcdma -> "${cell.cellIdentity.uarfcn}"
-            else -> "N/A"
-        }
-    }
-
-    private fun formatMcc(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> cell.cellIdentity.mccString ?: "N/A"
-            is CellInfoGsm -> cell.cellIdentity.mccString ?: "N/A"
-            is CellInfoWcdma -> cell.cellIdentity.mccString ?: "N/A"
-            else -> "N/A"
-        }
-    }
-
-    private fun formatMnc(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> cell.cellIdentity.mncString ?: "N/A"
-            is CellInfoGsm -> cell.cellIdentity.mncString ?: "N/A"
-            is CellInfoWcdma -> cell.cellIdentity.mncString ?: "N/A"
-            else -> "N/A"
-        }
-    }
-
-    private fun formatBandwidth(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> {
-                val bw = cell.cellIdentity.bandwidth
-                if (bw != Int.MAX_VALUE && bw > 0) "${bw / 1000} MHz" else "N/A"
-            }
-            else -> "N/A"
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
+        provider.stop(telephonyManager)
+        telephonyManager.listen(listener, PhoneStateListener.LISTEN_NONE)
         instance = null
+        onServiceStopped?.invoke()
+        onServiceStopped = null
+        onInfoUpdated = null
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

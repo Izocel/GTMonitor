@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.example.gtmonitor.databinding.ActivityMainBinding
@@ -32,29 +33,74 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.stopButton.setOnClickListener {
-            GTService.instance?.stopSelf()
-            finish()
+        binding.toggleButton.setOnClickListener {
+            if (GTService.instance != null) {
+                GTService.instance?.onServiceStopped = {
+                    handler.post {
+                        updateUI(ConnectionInfo())
+                        updateToggleState()
+                    }
+                }
+                GTService.instance?.stopSelf()
+            } else {
+                startMonitoring()
+            }
         }
 
-        // Auto-start on launch
-        startMonitoring()
+        binding.refreshButton.setOnClickListener {
+            GTService.instance?.refreshNotification("Manual refresh")
+        }
+
+        binding.logButton.setOnClickListener {
+            startActivity(Intent(this, LogActivity::class.java))
+        }
+
+        // Auto-start service on launch if permissions are granted
+        if (GTService.instance == null && hasPermissions()) {
+            startGTService()
+        } else if (!hasPermissions()) {
+            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, PERMISSION_REQUEST_CODE)
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        updateToggleState()
         val service = GTService.instance
         if (service != null) {
+            service.refreshNotification("App resumed")
             updateUI(service.currentInfo)
-            service.onInfoUpdated = { info ->
-                handler.post { updateUI(info) }
-            }
+            bindServiceCallbacks(service)
+        } else {
+            updateUI(ConnectionInfo())
         }
     }
 
     override fun onPause() {
         super.onPause()
         GTService.instance?.onInfoUpdated = null
+        GTService.instance?.onServiceStopped = null
+    }
+
+    private fun updateToggleState() {
+        val running = GTService.instance != null
+        if (running) {
+            binding.toggleButton.text = getString(R.string.btn_stop_service)
+            binding.toggleButton.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(0xFFCF6679.toInt())
+            binding.toggleButton.setTextColor(0xFFFFFFFF.toInt())
+            binding.refreshButton.visibility = View.VISIBLE
+            binding.statusHeader.text = getString(R.string.status_monitoring)
+            binding.statusHeader.setTextColor(0xFF00E676.toInt())
+        } else {
+            binding.toggleButton.text = getString(R.string.btn_start_service)
+            binding.toggleButton.backgroundTintList =
+                android.content.res.ColorStateList.valueOf(0xFF00E676.toInt())
+            binding.toggleButton.setTextColor(0xFF000000.toInt())
+            binding.refreshButton.visibility = View.GONE
+            binding.statusHeader.text = getString(R.string.status_stopped)
+            binding.statusHeader.setTextColor(0xFFCF6679.toInt())
+        }
     }
 
     private fun updateUI(info: ConnectionInfo) {
@@ -88,14 +134,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun bindServiceCallbacks(service: GTService) {
+        service.onInfoUpdated = { info ->
+            handler.post {
+                updateUI(info)
+                updateToggleState()
+            }
+        }
+        service.onServiceStopped = {
+            handler.post {
+                updateUI(ConnectionInfo())
+                updateToggleState()
+            }
+        }
+    }
+
     private fun startGTService() {
-        val alreadyRunning = GTService.instance != null
         val intent = Intent(this, GTService::class.java)
         startForegroundService(intent)
-        // Only auto-close on first start, not when reopened via notification
-        if (!alreadyRunning) {
-            finish()
-        }
+        // Poll until the service instance is available, then bind callbacks and refresh UI
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                val service = GTService.instance
+                if (service != null) {
+                    updateToggleState()
+                    bindServiceCallbacks(service)
+                    service.refreshNotification("Service started")
+                } else {
+                    handler.postDelayed(this, 100)
+                }
+            }
+        }, 100)
     }
 
     override fun onRequestPermissionsResult(

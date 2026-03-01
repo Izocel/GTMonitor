@@ -2,16 +2,9 @@ package com.example.gtmonitor
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.telephony.CellInfo
-import android.telephony.CellInfoCdma
-import android.telephony.CellInfoGsm
-import android.telephony.CellInfoLte
-import android.telephony.CellInfoWcdma
 import android.telephony.PhoneStateListener
 import android.telephony.ServiceState
-import android.util.Log
 
 class GTListener(private val context: Context) : PhoneStateListener() {
 
@@ -22,17 +15,21 @@ class GTListener(private val context: Context) : PhoneStateListener() {
     override fun onCellInfoChanged(cellInfo: MutableList<CellInfo>?) {
         super.onCellInfoChanged(cellInfo)
 
-        val registered = cellInfo?.firstOrNull { it.isRegistered }
-        val currentCellId = registered?.let { getCellId(it) }
+        GTLog.d("onCellInfoChanged: ${cellInfo?.size ?: 0} cells")
+        cellInfo?.forEachIndexed { i, cell ->
+            GTLog.d("  listener cell[$i]: ${cell.javaClass.simpleName} isRegistered=${cell.isRegistered}")
+        }
+
+        val service = GTService.instance ?: return
+        val currentCellId = service.provider.extractCellId(cellInfo)
 
         val towerChanged = currentCellId != null && currentCellId != lastCellId
         if (towerChanged) {
-            Log.d("GT", "Tower changed: $lastCellId -> $currentCellId")
-            playAlert(AlertLevel.IMPORTANT)
-            GTService.instance?.refreshNotification("Tower changed: $currentCellId")
+            GTLog.d("Tower changed: $lastCellId -> $currentCellId")
+            service.refreshWithCellInfo(cellInfo, "Tower changed: $currentCellId")
         } else {
-            Log.d("GT", "Cell info updated (same tower): ${cellInfo?.size ?: 0} cells")
-            GTService.instance?.refreshNotification("Cell info updated")
+            GTLog.d("Cell info updated (same tower): ${cellInfo?.size ?: 0} cells")
+            service.refreshWithCellInfo(cellInfo, "Cell info updated")
         }
 
         lastCellId = currentCellId
@@ -53,10 +50,9 @@ class GTListener(private val context: Context) : PhoneStateListener() {
                 0 -> AlertLevel.IMPORTANT         // back in service
                 else -> AlertLevel.SILENT
             }
-            Log.d("GT", "Service state changed: $stateStr")
-            playAlert(level)
+            GTLog.d("Service state changed: $stateStr")
         } else {
-            Log.d("GT", "Service state: $stateStr")
+            GTLog.d("Service state: $stateStr")
         }
 
         lastServiceState = currentState
@@ -64,31 +60,5 @@ class GTListener(private val context: Context) : PhoneStateListener() {
         GTService.instance?.refreshNotification("State: $stateStr")
     }
 
-    private fun getCellId(cell: CellInfo): String {
-        return when (cell) {
-            is CellInfoLte -> "LTE-${cell.cellIdentity.ci}"
-            is CellInfoGsm -> "GSM-${cell.cellIdentity.cid}"
-            is CellInfoWcdma -> "WCDMA-${cell.cellIdentity.cid}"
-            is CellInfoCdma -> "CDMA-${cell.cellIdentity.basestationId}"
-            else -> "Unknown-${cell.hashCode()}"
-        }
-    }
-
     enum class AlertLevel { SILENT, IMPORTANT, CRITICAL }
-
-    private fun playAlert(level: AlertLevel) {
-        when (level) {
-            AlertLevel.CRITICAL -> {
-                // Long urgent alert tone
-                val tone = ToneGenerator(AudioManager.STREAM_ALARM, 100)
-                tone.startTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 1000)
-            }
-            AlertLevel.IMPORTANT -> {
-                // Short double beep
-                val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-                tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 400)
-            }
-            AlertLevel.SILENT -> { /* no sound */ }
-        }
-    }
 }
