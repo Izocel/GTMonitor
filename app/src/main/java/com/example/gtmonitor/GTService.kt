@@ -125,8 +125,18 @@ class GTService : Service() {
     }
 
     private fun publishSnapshot(snapshot: CellDataSnapshot, event: String?) {
-        val networkType = getNetworkTypeName()
-        val operator = telephonyManager.networkOperatorName.ifEmpty { "Unknown" }
+        val networkType = try {
+            getNetworkTypeName().let {
+                if (it == "Unknown") inferNetworkTypeFromCells(snapshot) ?: it else it
+            }
+        } catch (_: Exception) { inferNetworkTypeFromCells(snapshot) ?: "Unknown" }
+        val operator = try {
+            telephonyManager.networkOperatorName
+                .takeIf { !it.isNullOrBlank() }
+                ?: telephonyManager.simOperatorName
+                    .takeIf { !it.isNullOrBlank() }
+                ?: "Unknown"
+        } catch (_: Exception) { "Unknown" }
 
         val timestamp = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         val lastEvent = if (event != null) "$timestamp - $event" else "$timestamp - Initial read"
@@ -143,6 +153,8 @@ class GTService : Service() {
             mcc = snapshot.mcc ?: "N/A",
             mnc = snapshot.mnc ?: "N/A",
             bandwidth = snapshot.bandwidth ?: "N/A",
+            timingAdvance = snapshot.timingAdvance ?: "N/A",
+            estimatedDistance = snapshot.estimatedDistance ?: "N/A",
             serviceState = currentInfo.serviceState,
             visibleCells = snapshot.visibleCells ?: "N/A",
             lastEvent = lastEvent
@@ -203,6 +215,19 @@ class GTService : Service() {
             TelephonyManager.NETWORK_TYPE_EVDO_A,
             TelephonyManager.NETWORK_TYPE_EVDO_B -> "EVDO"
             else -> "Unknown"
+        }
+    }
+
+    /** Infer network type from the registered cell's technology */
+    private fun inferNetworkTypeFromCells(snapshot: CellDataSnapshot): String? {
+        val vis = snapshot.visibleCells ?: return null
+        return when {
+            vis.contains("● LTE") || vis.contains("●  LTE") -> "4G LTE"
+            vis.contains("● NR") || vis.contains("●  NR") -> "5G NR"
+            vis.contains("● WCDMA") || vis.contains("●  WCDMA") -> "3G UMTS"
+            vis.contains("● GSM") || vis.contains("●  GSM") -> "2G GSM"
+            vis.contains("● CDMA") || vis.contains("●  CDMA") -> "CDMA"
+            else -> null
         }
     }
 

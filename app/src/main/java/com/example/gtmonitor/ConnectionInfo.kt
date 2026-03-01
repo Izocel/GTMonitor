@@ -12,6 +12,8 @@ data class ConnectionInfo(
     val mcc: String = "--",
     val mnc: String = "--",
     val bandwidth: String = "--",
+    val timingAdvance: String = "--",
+    val estimatedDistance: String = "--",
     val serviceState: String = "--",
     val visibleCells: String = "--",
     val lastEvent: String = "--"

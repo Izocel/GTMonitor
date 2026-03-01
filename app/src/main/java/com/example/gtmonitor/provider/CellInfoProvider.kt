@@ -1,6 +1,7 @@
 package com.example.gtmonitor.provider
 
 import android.telephony.CellInfo
+import android.telephony.ServiceState
 import android.telephony.TelephonyManager
 import com.example.gtmonitor.ConnectionInfo
 
@@ -51,6 +52,13 @@ interface CellInfoProvider {
 
     /** Format a [CellInfo] list into the visible-cells display string */
     fun formatVisibleCells(cellInfoList: List<CellInfo>?): String
+
+    /**
+     * Process a service-state change.  On devices where [CellInfo] is unavailable,
+     * providers can extract cell identity from [ServiceState] →
+     * [NetworkRegistrationInfo] → [CellIdentity].  Default: no-op.
+     */
+    fun processServiceState(state: ServiceState?) { /* no-op by default */ }
 }
 
 /**
@@ -68,6 +76,8 @@ data class CellDataSnapshot(
     val mcc: String? = null,
     val mnc: String? = null,
     val bandwidth: String? = null,
+    val timingAdvance: String? = null,
+    val estimatedDistance: String? = null,
     val cellCount: Int = 0,
     val visibleCells: String? = null,
     val rawCellInfoList: List<CellInfo>? = null

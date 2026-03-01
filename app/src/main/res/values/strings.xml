@@ -12,6 +12,8 @@
     <string name="label_mcc">MCC</string>
     <string name="label_mnc">MNC</string>
     <string name="label_bandwidth">BANDWIDTH</string>
+    <string name="label_ta">TIMING ADV</string>
+    <string name="label_distance">EST. DISTANCE</string>
     <string name="label_service_state">SERVICE STATE</string>
     <string name="label_visible_cells">VISIBLE CELLS</string>
     <string name="label_last_event">LAST EVENT</string>

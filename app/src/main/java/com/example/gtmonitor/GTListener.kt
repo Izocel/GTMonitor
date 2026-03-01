@@ -56,8 +56,10 @@ class GTListener(private val context: Context) : PhoneStateListener() {
         }
 
         lastServiceState = currentState
-        GTService.instance?.updateServiceState(stateStr)
-        GTService.instance?.refreshNotification("State: $stateStr")
+        val service = GTService.instance ?: return
+        service.provider.processServiceState(state)
+        service.updateServiceState(stateStr)
+        service.refreshNotification("State: $stateStr")
     }
 
     enum class AlertLevel { SILENT, IMPORTANT, CRITICAL }

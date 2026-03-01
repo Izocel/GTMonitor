@@ -7,6 +7,7 @@ import android.telephony.CellInfoGsm
 import android.telephony.CellInfoLte
 import android.telephony.CellInfoNr
 import android.telephony.CellInfoWcdma
+import android.telephony.CellSignalStrengthLte
 import android.telephony.TelephonyManager
 import com.example.gtmonitor.GTLog
 import java.util.concurrent.Executors
@@ -73,8 +74,13 @@ open class DefaultCellInfoProvider : CellInfoProvider {
             val reg = if (cell.isRegistered) "●" else "○"
             val type = getCellType(cell)
             val id = formatCellIdString(cell)
+            val pci = getPci(cell).let { if (it == "N/A") "" else " PCI:$it" }
             val dbm = getSignalDbm(cell)
-            "$reg $type $id  $dbm"
+            // Only show distance for the registered cell (TA is invalid on neighbors)
+            val distPart = if (cell.isRegistered) {
+                getTimingAdvance(cell)?.let { " ~${formatDistance(it)}" } ?: ""
+            } else ""
+            "$reg $type  ID:$id$pci  $dbm$distPart"
         }
     }
 
@@ -88,6 +94,10 @@ open class DefaultCellInfoProvider : CellInfoProvider {
         val mcc = if (mccMnc.length >= 3) mccMnc.substring(0, 3) else null
         val mnc = if (mccMnc.length >= 4) mccMnc.substring(3) else null
 
+        val ta = registered?.let { getTimingAdvance(it) }
+        val taStr = ta?.toString()
+        val distStr = ta?.let { formatDistance(it) }
+
         return CellDataSnapshot(
             signalDbm = registered?.let { getSignalDbm(it) },
             signalLevel = registered?.let { getSignalLevel(it) },
@@ -98,6 +108,8 @@ open class DefaultCellInfoProvider : CellInfoProvider {
             mcc = registered?.let { getCellMcc(it) } ?: mcc,
             mnc = registered?.let { getCellMnc(it) } ?: mnc,
             bandwidth = registered?.let { getBandwidth(it) },
+            timingAdvance = taStr,
+            estimatedDistance = distStr,
             cellCount = cellInfoList?.size ?: 0,
             visibleCells = formatVisibleCells(cellInfoList),
             rawCellInfoList = cellInfoList
@@ -147,30 +159,30 @@ open class DefaultCellInfoProvider : CellInfoProvider {
     }
 
     protected fun formatCellIdString(cell: CellInfo): String = when (cell) {
-        is CellInfoLte -> "${cell.cellIdentity.ci}"
-        is CellInfoGsm -> "${cell.cellIdentity.cid}"
-        is CellInfoWcdma -> "${cell.cellIdentity.cid}"
-        is CellInfoCdma -> "${cell.cellIdentity.basestationId}"
+        is CellInfoLte -> cell.cellIdentity.ci.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoGsm -> cell.cellIdentity.cid.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoWcdma -> cell.cellIdentity.cid.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoCdma -> cell.cellIdentity.basestationId.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
         else -> "N/A"
     }
 
     protected fun getTac(cell: CellInfo): String = when (cell) {
-        is CellInfoLte -> "${cell.cellIdentity.tac}"
-        is CellInfoGsm -> "${cell.cellIdentity.lac}"
-        is CellInfoWcdma -> "${cell.cellIdentity.lac}"
+        is CellInfoLte -> cell.cellIdentity.tac.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoGsm -> cell.cellIdentity.lac.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoWcdma -> cell.cellIdentity.lac.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
         else -> "N/A"
     }
 
     protected fun getPci(cell: CellInfo): String = when (cell) {
-        is CellInfoLte -> "${cell.cellIdentity.pci}"
-        is CellInfoWcdma -> "${cell.cellIdentity.psc}"
+        is CellInfoLte -> cell.cellIdentity.pci.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoWcdma -> cell.cellIdentity.psc.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
         else -> "N/A"
     }
 
     protected fun getEarfcn(cell: CellInfo): String = when (cell) {
-        is CellInfoLte -> "${cell.cellIdentity.earfcn}"
-        is CellInfoGsm -> "${cell.cellIdentity.arfcn}"
-        is CellInfoWcdma -> "${cell.cellIdentity.uarfcn}"
+        is CellInfoLte -> cell.cellIdentity.earfcn.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoGsm -> cell.cellIdentity.arfcn.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
+        is CellInfoWcdma -> cell.cellIdentity.uarfcn.takeIf { it != Int.MAX_VALUE }?.toString() ?: "N/A"
         else -> "N/A"
     }
 
@@ -194,5 +206,49 @@ open class DefaultCellInfoProvider : CellInfoProvider {
             if (bw != Int.MAX_VALUE && bw > 0) "${bw / 1000} MHz" else "N/A"
         }
         else -> "N/A"
+    }
+
+    // ── Timing Advance & distance helpers ──────────────────────
+
+    /**
+     * Extract Timing Advance from a CellInfo.
+     * LTE TA is an integer 0–1282 (Int.MAX_VALUE = unavailable).
+     */
+    protected fun getTimingAdvance(cell: CellInfo): Int? {
+        if (cell is CellInfoLte) {
+            val ta = cell.cellSignalStrength.timingAdvance
+            if (ta != Int.MAX_VALUE && ta >= 0) return ta
+        }
+        return null
+    }
+
+    /**
+     * Extract TA from a [SignalStrength] object (useful on Samsung
+     * where CellInfo is empty but SignalStrength is populated).
+     */
+    protected fun getTimingAdvanceFromSignalStrength(ss: android.telephony.SignalStrength?): Int? {
+        if (ss == null) return null
+        for (css in ss.cellSignalStrengths) {
+            if (css is CellSignalStrengthLte) {
+                val ta = css.timingAdvance
+                if (ta != Int.MAX_VALUE && ta >= 0) return ta
+            }
+        }
+        return null
+    }
+
+    /**
+     * Convert LTE Timing Advance to a human-readable distance string.
+     * Each TA unit ≈ 78.12 m (one-way propagation at speed of light
+     * for a 1 μs timing advance step in LTE: c × 0.5208 μs / 2 ≈ 78.12 m).
+     */
+    protected fun formatDistance(ta: Int): String {
+        if (ta == 0) return "< 78 m"
+        val metres = ta * 78.12
+        return if (metres < 1000) {
+            "${metres.toInt()} m"
+        } else {
+            "%.1f km".format(metres / 1000.0)
+        }
     }
 }

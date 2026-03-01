@@ -115,6 +115,8 @@ class MainActivity : AppCompatActivity() {
         binding.mccValue.text = info.mcc
         binding.mncValue.text = info.mnc
         binding.bandwidthValue.text = info.bandwidth
+        binding.taValue.text = info.timingAdvance
+        binding.distanceValue.text = info.estimatedDistance
         binding.serviceStateValue.text = info.serviceState
         binding.visibleCellsValue.text = info.visibleCells
         binding.lastEventValue.text = info.lastEvent
