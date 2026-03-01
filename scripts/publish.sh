@@ -8,6 +8,18 @@ VERSION_CODE=$(node -p "require('./package.json').versionCode")
 TAG="v${VERSION}.${VERSION_CODE}"
 REPO_URL=$(node -p "require('./package.json').repository.url")
 
+# ── Collect output files ─────────────────────────────────────────────
+OUTPUT_DIR="app/build/outputs"
+ASSETS=()
+while IFS= read -r -d '' file; do
+  ASSETS+=("$file")
+done < <(find "${OUTPUT_DIR}" -type f \( -name "*.apk" -o -name "*.aab" \) -print0)
+
+if [[ ${#ASSETS[@]} -eq 0 ]]; then
+  echo "WARNING: No .apk or .aab files found in ${OUTPUT_DIR}"
+  exit 1
+fi
+
 echo "==> Publishing ${TAG}"
 
 # ── Ensure working tree is clean ─────────────────────────────────────
@@ -45,17 +57,6 @@ git tag -a "${TAG}" -m "Release ${TAG}"
 echo "==> Pushing branch and tag to origin"
 git push origin "${BRANCH}"
 git push origin "${TAG}"
-
-# ── Collect output files ─────────────────────────────────────────────
-OUTPUT_DIR="app/build/outputs"
-ASSETS=()
-while IFS= read -r -d '' file; do
-  ASSETS+=("$file")
-done < <(find "${OUTPUT_DIR}" -type f \( -name "*.apk" -o -name "*.aab" \) -print0)
-
-if [[ ${#ASSETS[@]} -eq 0 ]]; then
-  echo "WARNING: No .apk or .aab files found in ${OUTPUT_DIR}"
-fi
 
 # ── Create / update GitHub release ───────────────────────────────────
 if command -v gh &>/dev/null; then
