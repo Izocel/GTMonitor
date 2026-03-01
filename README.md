@@ -50,7 +50,7 @@
       <sub>Samsung-A536W</sub>
     </td>
     <td align="center">
-      <img src="screenshots/pixel.png" width="270" alt="Pixel"/><br/>
+      <img src="screenshots/Pixel.png" width="270" alt="Pixel"/><br/>
       <sub>Pixel</sub>
     </td>
   </tr>
