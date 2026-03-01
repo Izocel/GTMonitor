@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="120" alt="GT Monitor icon"/>
+  <a href="https://github.com/izocel/gtmonitor">
+    <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="120" alt="GT Monitor icon"/>
+  </a>
 </p>
 
 <h1 align="center">GT Monitor</h1>
@@ -7,6 +9,17 @@
 <p align="center">
   Android foreground service that monitors cellular network changes in real-time,<br/>
   with per-device provider architecture for broad OEM compatibility.
+</p>
+
+<p align="center">
+  <a href="https://github.com/izocel/gtmonitor/releases"><img src="https://img.shields.io/github/v/release/izocel/gtmonitor?style=flat-square" alt="Release"/></a>
+  <img src="https://img.shields.io/badge/platform-Android%2010%2B-brightgreen?style=flat-square" alt="Platform"/>
+  <img src="https://img.shields.io/badge/language-Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin"/>
+  <img src="https://img.shields.io/badge/license-GGPL-blue?style=flat-square" alt="License"/>
+</p>
+
+<p align="center">
+  <b>Author:</b> RVÐ
 </p>
 
 ---
@@ -22,10 +35,11 @@
 - **Detailed dashboard** — tap the notification to view all connection details; pull-to-refresh
 - **System log viewer** — built-in live-tail log page (file-backed, max 5 000 lines) for on-device diagnostics
 - **Device-specific providers** — pluggable provider architecture selects the best telephony strategy per OEM:
-  | Provider | Devices | Strategy |
-  |----------|---------|----------|
-  | `DefaultCellInfoProvider` | Pixel, AOSP, most OEMs | `requestCellInfoUpdate` / `allCellInfo` |
-  | `SamsungCellInfoProvider` | Samsung (One UI) | `SignalStrength` fallback + cached `onCellInfoChanged` data when standard APIs return empty |
+
+  | Provider                  | Devices                | Strategy                                                                                    |
+  | ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
+  | `DefaultCellInfoProvider` | Pixel, AOSP, most OEMs | `requestCellInfoUpdate` / `allCellInfo`                                                     |
+  | `SamsungCellInfoProvider` | Samsung (One UI)       | `SignalStrength` fallback + cached `onCellInfoChanged` data when standard APIs return empty |
 
 ## Screenshots
 
@@ -150,11 +164,3 @@ app/src/main/java/com/example/gtmonitor/
     ├── SamsungCellInfoProvider.kt  # Samsung SignalStrength fallback
     └── DeviceProviderFactory.kt   # OEM-based provider selection
 ```
-
-## Author
-
-RVÐ
-
-## License
-
-GGPL
