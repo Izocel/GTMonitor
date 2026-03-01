@@ -53,30 +53,67 @@ the correct provider. Adding a new OEM module is two steps:
 ## Build
 
 ```bash
-npm run build           # full build with lint
-npm run assemble-debug  # debug APK only
+npm run build           # full Gradle build
+npm run assemble        # debug APK only
+npm run assemble-prod   # release APK (signed)
+npm run bundle          # debug AAB
+npm run bundle-prod     # release AAB (signed)
 npm run android         # install debug + launch on device
 npm run android-prod    # install release + launch on device
+npm run dev             # clean → build → install debug
+npm run release         # clean → build → assemble/bundle all → install release
 npm run clean           # clean build artifacts
 npm run lint            # run lint checks
+npm run test            # run tests
 ```
 
 Requires Android SDK with **minSdk 29** (Android 10+) · targetSdk 34 · compileSdk 34.
 
+## Signing
+
+Release builds are signed using credentials from `keystore.properties` (git-ignored).
+The keystore file (`*.keystore`) is also git-ignored.
+
+**First-time setup:**
+
+1. Generate a keystore in the project root:
+
+   ```bash
+   keytool -genkeypair -v \
+     -keystore release.keystore \
+     -alias GTMonitor \
+     -keyalg RSA -keysize 2048 -validity 10000 \
+     -storepass <password> -keypass <password> \
+     -dname "CN=GTMonitor, OU=Dev, O=GTMonitor, L=Unknown, ST=Unknown, C=US"
+   ```
+
+2. Create `keystore.properties` in the project root:
+
+   ```properties
+   storeFile=release.keystore
+   storePassword=<password>
+   keyAlias=GTMonitor
+   keyPassword=<password>
+   ```
+
+> **Note:** PKCS12 keystores require `storePassword` and `keyPassword` to be identical.
+
+Both files are listed in `.gitignore` and must **never** be committed.
+
 ## Permissions
 
-| Permission                        | Purpose                                           |
-| --------------------------------- | ------------------------------------------------- |
-| `READ_PHONE_STATE`                | Access cell / network info                        |
-| `ACCESS_FINE_LOCATION`            | Cell tower location data                          |
-| `ACCESS_COARSE_LOCATION`          | Fallback location for cell queries                |
-| `FOREGROUND_SERVICE`              | Run persistent background service                 |
-| `FOREGROUND_SERVICE_LOCATION`     | Location-type foreground service (Android 14+)    |
-| `FOREGROUND_SERVICE_CONNECTED_DEVICE` | Connected-device foreground service type      |
-| `FOREGROUND_SERVICE_DATA_SYNC`    | Data-sync foreground service type                 |
-| `CHANGE_NETWORK_STATE`            | Network state change events                       |
-| `POST_NOTIFICATIONS`              | Show status notification (Android 13+)            |
-| `RECEIVE_BOOT_COMPLETED`          | Auto-start on device boot                         |
+| Permission                            | Purpose                                        |
+| ------------------------------------- | ---------------------------------------------- |
+| `READ_PHONE_STATE`                    | Access cell / network info                     |
+| `ACCESS_FINE_LOCATION`                | Cell tower location data                       |
+| `ACCESS_COARSE_LOCATION`              | Fallback location for cell queries             |
+| `FOREGROUND_SERVICE`                  | Run persistent background service              |
+| `FOREGROUND_SERVICE_LOCATION`         | Location-type foreground service (Android 14+) |
+| `FOREGROUND_SERVICE_CONNECTED_DEVICE` | Connected-device foreground service type       |
+| `FOREGROUND_SERVICE_DATA_SYNC`        | Data-sync foreground service type              |
+| `CHANGE_NETWORK_STATE`                | Network state change events                    |
+| `POST_NOTIFICATIONS`                  | Show status notification (Android 13+)         |
+| `RECEIVE_BOOT_COMPLETED`              | Auto-start on device boot                      |
 
 ## Project structure
 

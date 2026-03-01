@@ -33,6 +33,10 @@ desktop.ini
 node_modules/
 package-lock.json
 
+# Signing
+keystore.properties
+*.keystore
+
 # Misc
 *.log
 *.tmp

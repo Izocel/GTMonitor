@@ -9,14 +9,17 @@
     "url": "https://github.com/izocel/gtmonitor.git"
   },
   "scripts": {
+    "test": "gradlew test",
+    "lint": "gradlew lint",
     "build": "gradlew build",
     "clean": "gradlew clean",
-    "assemble-debug": "gradlew assembleDebug",
-    "assemble-release": "gradlew assembleRelease",
+    "assemble": "gradlew assembleDebug",
+    "bundle-prod": "gradlew bundleRelease",
+    "bundle": "gradlew bundleDebug",
+    "assemble-prod": "gradlew assembleRelease",
     "dev": "npm run clean && npm run build && npm run android",
     "android": "gradlew installDebug && adb shell am start -n com.example.gtmonitor/.MainActivity",
     "android-prod": "gradlew installRelease && adb shell am start -n com.example.gtmonitor/.MainActivity",
-    "test": "gradlew test",
-    "lint": "gradlew lint"
+    "release": "npm run clean && npm run build && npm run assemble && npm run assemble-prod && npm run bundle && npm run bundle-prod && npm run android-prod"
   }
 }
