@@ -21,6 +21,8 @@ open class DefaultCellInfoProvider : CellInfoProvider {
 
     override val providerName = "Default"
 
+    override var onSnapshotAvailable: ((CellDataSnapshot) -> Unit)? = null
+
     override fun start(tm: TelephonyManager) {
         GTLog.d("[$providerName] Provider started")
     }

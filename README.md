@@ -5,19 +5,50 @@
 <h1 align="center">GT Monitor</h1>
 
 <p align="center">
-  Android background service that monitors cellular network changes in real-time.
+  Android foreground service that monitors cellular network changes in real-time,<br/>
+  with per-device provider architecture for broad OEM compatibility.
 </p>
 
 ---
 
 ## Features
 
-- **Foreground service** — runs persistently with a status notification
-- **Live cell info** — operator, network type (2G/3G/4G/5G), signal strength, cell ID, TAC, PCI, EARFCN, MCC/MNC, bandwidth
-- **Tower change alerts** — audible notification when the registered cell tower changes
-- **Service state monitoring** — alerts on loss of service or emergency-only mode
+- **Foreground service** — runs persistently with a rich status notification (signal, cell count, events)
+- **Live cell info** — operator, network type (2G / 3G / 4G / 5G), signal dBm & level, cell ID, TAC, PCI, EARFCN, MCC / MNC, bandwidth
+- **Visible-cell list** — all detected cells with registration status, type, ID and signal
+- **Tower change detection** — event logged when the registered cell tower changes
+- **Service state monitoring** — tracks in-service / out-of-service / emergency-only / power-off transitions
 - **Boot autostart** — service resumes automatically after device reboot
-- **Detailed dashboard** — tap the notification to view all connection details
+- **Detailed dashboard** — tap the notification to view all connection details; pull-to-refresh
+- **System log viewer** — built-in live-tail log page (file-backed, max 5 000 lines) for on-device diagnostics
+- **Device-specific providers** — pluggable provider architecture selects the best telephony strategy per OEM:
+  | Provider | Devices | Strategy |
+  |----------|---------|----------|
+  | `DefaultCellInfoProvider` | Pixel, AOSP, most OEMs | `requestCellInfoUpdate` / `allCellInfo` |
+  | `SamsungCellInfoProvider` | Samsung (One UI) | `SignalStrength` fallback + cached `onCellInfoChanged` data when standard APIs return empty |
+
+## Architecture
+
+```
+MainActivity ─────────┐
+LogActivity           │  callbacks
+                      ▼
+GTService ──► CellInfoProvider (interface)
+  │               ▲
+  │      ┌────────┴────────┐
+  │      │                 │
+  │  DefaultCell…    SamsungCell…
+  │
+  ├── GTListener  (PhoneStateListener)
+  ├── GTLog       (file + live-tail logger)
+  └── BootReceiver
+```
+
+`DeviceProviderFactory` inspects `Build.MANUFACTURER` at service start and instantiates
+the correct provider. Adding a new OEM module is two steps:
+
+1. Create a class extending `DefaultCellInfoProvider` (or implementing `CellInfoProvider`)
+2. Add a matching rule in `DeviceProviderFactory.create()`
 
 ## Build
 
@@ -30,17 +61,40 @@ npm run clean           # clean build artifacts
 npm run lint            # run lint checks
 ```
 
-Requires Android SDK with `minSdk 28` (Android 9+).
+Requires Android SDK with **minSdk 29** (Android 10+) · targetSdk 34 · compileSdk 34.
 
 ## Permissions
 
-| Permission               | Purpose                                |
-| ------------------------ | -------------------------------------- |
-| `READ_PHONE_STATE`       | Access cell/network info               |
-| `ACCESS_FINE_LOCATION`   | Cell tower location data               |
-| `FOREGROUND_SERVICE`     | Run persistent background service      |
-| `POST_NOTIFICATIONS`     | Show status notification (Android 13+) |
-| `RECEIVE_BOOT_COMPLETED` | Auto-start on device boot              |
+| Permission                        | Purpose                                           |
+| --------------------------------- | ------------------------------------------------- |
+| `READ_PHONE_STATE`                | Access cell / network info                        |
+| `ACCESS_FINE_LOCATION`            | Cell tower location data                          |
+| `ACCESS_COARSE_LOCATION`          | Fallback location for cell queries                |
+| `FOREGROUND_SERVICE`              | Run persistent background service                 |
+| `FOREGROUND_SERVICE_LOCATION`     | Location-type foreground service (Android 14+)    |
+| `FOREGROUND_SERVICE_CONNECTED_DEVICE` | Connected-device foreground service type      |
+| `FOREGROUND_SERVICE_DATA_SYNC`    | Data-sync foreground service type                 |
+| `CHANGE_NETWORK_STATE`            | Network state change events                       |
+| `POST_NOTIFICATIONS`              | Show status notification (Android 13+)            |
+| `RECEIVE_BOOT_COMPLETED`          | Auto-start on device boot                         |
+
+## Project structure
+
+```
+app/src/main/java/com/example/gtmonitor/
+├── MainActivity.kt          # Dashboard UI, permission handling, service lifecycle
+├── GTService.kt             # Foreground service — delegates to CellInfoProvider
+├── GTListener.kt            # PhoneStateListener (cell info & service state)
+├── GTLog.kt                 # Singleton logger (Logcat + file + live listeners)
+├── LogActivity.kt           # Live-tail log viewer
+├── ConnectionInfo.kt        # Data class for all UI fields
+├── BootReceiver.kt          # BOOT_COMPLETED → start service
+└── provider/
+    ├── CellInfoProvider.kt       # Interface + CellDataSnapshot data class
+    ├── DefaultCellInfoProvider.kt # Standard Android API implementation
+    ├── SamsungCellInfoProvider.kt  # Samsung SignalStrength fallback
+    └── DeviceProviderFactory.kt   # OEM-based provider selection
+```
 
 ## Author
 

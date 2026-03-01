@@ -15,6 +15,13 @@ interface CellInfoProvider {
     val providerName: String
 
     /**
+     * Optional callback the provider fires whenever it has a fresh snapshot
+     * (e.g. from a live signal-strength listener).  The service sets this
+     * after creating the provider so the UI stays in sync.
+     */
+    var onSnapshotAvailable: ((CellDataSnapshot) -> Unit)?
+
+    /**
      * Initialise the provider (register listeners, etc.).
      * Called once when the service starts.
      */

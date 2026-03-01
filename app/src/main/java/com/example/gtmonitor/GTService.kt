@@ -82,6 +82,9 @@ class GTService : Service() {
 
         // Select device-specific provider
         provider = DeviceProviderFactory.create()
+        provider.onSnapshotAvailable = { snapshot ->
+            publishSnapshot(snapshot, "Signal updated")
+        }
         provider.start(telephonyManager)
 
         listener = GTListener(this)

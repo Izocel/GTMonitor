@@ -26,6 +26,7 @@ class SamsungCellInfoProvider : DefaultCellInfoProvider() {
 
     private var cachedSignalStrength: SignalStrength? = null
     private var cachedCells: List<CellInfo>? = null
+    private var telephonyManagerRef: TelephonyManager? = null
 
     private val signalListener = object : PhoneStateListener() {
         @Deprecated("Deprecated in API 31")
@@ -33,12 +34,17 @@ class SamsungCellInfoProvider : DefaultCellInfoProvider() {
             super.onSignalStrengthsChanged(signalStrength)
             cachedSignalStrength = signalStrength
             GTLog.d("[$providerName] SignalStrength updated: ${signalStrength?.level}/4, ${getDbmFromSignalStrength(signalStrength)} dBm")
+            // Push live update to the service so the UI refreshes
+            onSnapshotAvailable?.let { callback ->
+                callback(buildSamsungSnapshot(telephonyManagerRef))
+            }
         }
     }
 
     @SuppressLint("MissingPermission")
     override fun start(tm: TelephonyManager) {
         GTLog.d("[$providerName] Provider started (Samsung workaround active)")
+        telephonyManagerRef = tm
         cachedSignalStrength = tm.signalStrength
         GTLog.d("[$providerName] Initial signal: ${cachedSignalStrength?.level}/4, ${getDbmFromSignalStrength(cachedSignalStrength)} dBm")
 
@@ -47,8 +53,10 @@ class SamsungCellInfoProvider : DefaultCellInfoProvider() {
 
     override fun stop(tm: TelephonyManager) {
         tm.listen(signalListener, PhoneStateListener.LISTEN_NONE)
+        telephonyManagerRef = null
         cachedSignalStrength = null
         cachedCells = null
+        onSnapshotAvailable = null
         GTLog.d("[$providerName] Provider stopped")
     }
 
