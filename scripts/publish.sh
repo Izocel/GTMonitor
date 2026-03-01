@@ -21,8 +21,19 @@ BRANCH="release/${TAG}"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 if git rev-parse "${TAG}" >/dev/null 2>&1; then
-  echo "ERROR: Tag ${TAG} already exists."
-  exit 1
+  echo "WARNING: Tag ${TAG} already exists."
+  read -rp "Force overwrite? (y/N): " FORCE
+  if [[ "${FORCE}" =~ ^[Yy]$ ]]; then
+    echo "==> Deleting existing tag ${TAG} (local + remote)"
+    git tag -d "${TAG}" || true
+    git push origin ":refs/tags/${TAG}" || true
+    if gh release view "${TAG}" &>/dev/null 2>&1; then
+      gh release delete "${TAG}" --yes || true
+    fi
+  else
+    echo "Aborted."
+    exit 1
+  fi
 fi
 
 echo "==> Creating branch ${BRANCH}"
