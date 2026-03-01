@@ -27,6 +27,21 @@
   | `DefaultCellInfoProvider` | Pixel, AOSP, most OEMs | `requestCellInfoUpdate` / `allCellInfo` |
   | `SamsungCellInfoProvider` | Samsung (One UI) | `SignalStrength` fallback + cached `onCellInfoChanged` data when standard APIs return empty |
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="screenshots/Samsung-A536W.png" width="270" alt="Samsung A536W"/><br/>
+      <sub>Samsung-A536W</sub>
+    </td>
+    <td align="center">
+      <img src="screenshots/Pixel.png" width="270" alt="Pixel"/><br/>
+      <sub>Pixel</sub>
+    </td>
+  </tr>
+</table>
+
 ## Architecture
 
 ```
