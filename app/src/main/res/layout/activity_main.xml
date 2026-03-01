@@ -12,15 +12,34 @@
         android:padding="16dp">
 
         <!-- Header -->
-        <TextView
-            android:id="@+id/statusHeader"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/status_monitoring"
-            android:textColor="#00E676"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/statusHeader"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/status_monitoring"
+                android:textColor="#00E676"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/logButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LOG"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:padding="6dp"
+                android:background="?attr/selectableItemBackground" />
+
+        </LinearLayout>
 
         <!-- Operator & Network Type -->
         <TextView
@@ -380,16 +399,6 @@
             android:backgroundTint="#444466"
             android:textColor="#FFFFFF"
             android:visibility="gone"
-            android:layout_marginTop="8dp" />
-
-        <!-- View Log Button -->
-        <Button
-            android:id="@+id/logButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_view_log"
-            android:backgroundTint="#333355"
-            android:textColor="#AAAAAA"
             android:layout_marginTop="8dp" />
 
     </LinearLayout>

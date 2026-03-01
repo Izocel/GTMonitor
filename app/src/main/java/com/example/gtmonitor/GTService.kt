@@ -172,7 +172,7 @@ class GTService : Service() {
             .setContentTitle(title)
             .setContentText(details)
             .setStyle(Notification.BigTextStyle().bigText(details))
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
