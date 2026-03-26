@@ -26,6 +26,7 @@ class GTListener(private val context: Context) : PhoneStateListener() {
         val towerChanged = currentCellId != null && currentCellId != lastCellId
         if (towerChanged) {
             GTLog.d("Tower changed: $lastCellId -> $currentCellId")
+            NotificationSoundPlayer.play(context)
             service.refreshWithCellInfo(cellInfo, "Tower changed: $currentCellId")
         } else {
             GTLog.d("Cell info updated (same tower): ${cellInfo?.size ?: 0} cells")

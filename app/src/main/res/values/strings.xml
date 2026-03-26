@@ -25,4 +25,5 @@
     <string name="log_clear">Clear</string>
     <string name="log_back">Back</string>
     <string name="status_stopped">\u25CF SERVICE STOPPED</string>
+    <string name="mute">Mute</string>
 </resources>

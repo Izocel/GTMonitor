@@ -33,6 +33,18 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+
+        NotificationSoundPlayer.init(this)
+
+        // Set version dynamically
+        val versionView = binding.root.findViewById<android.widget.TextView>(R.id.versionText)
+        val versionName = try {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        } catch (e: Exception) {
+            "?"
+        }
+        versionView?.text = "v$versionName"
+
         binding.toggleButton.setOnClickListener {
             if (GTService.instance != null) {
                 GTService.instance?.onServiceStopped = {
@@ -54,6 +66,13 @@ class MainActivity : AppCompatActivity() {
         binding.logButton.setOnClickListener {
             startActivity(Intent(this, LogActivity::class.java))
         }
+
+        binding.muteToggle.setOnCheckedChangeListener { _, isChecked ->
+            NotificationSoundPlayer.setMuted(isChecked)
+        }
+
+        // Set initial mute toggle state
+        binding.muteToggle.isChecked = NotificationSoundPlayer.isMuted()
 
         // Auto-start service on launch if permissions are granted
         if (GTService.instance == null && hasPermissions()) {
